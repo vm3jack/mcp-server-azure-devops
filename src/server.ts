@@ -1,6 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
+  CallToolResult,
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
@@ -17,6 +18,7 @@ import {
 } from './shared/errors';
 import { handleResponseError } from './shared/errors/handle-request-error';
 import { AuthenticationMethod, AzureDevOpsClient } from './shared/auth';
+import { serialize } from './shared/utils/serialize';
 // Import environment defaults when needed in feature handlers
 
 // Import feature modules with request handlers and tool definitions
@@ -303,44 +305,58 @@ export function createAzureDevOpsServer(config: AzureDevOpsConfig): Server {
 
       // Route the request to the appropriate feature handler
       if (isWorkItemsRequest(request)) {
-        return await handleWorkItemsRequest(connection, request);
+        return optimizeResponse(
+          await handleWorkItemsRequest(connection, request),
+        );
       }
 
       if (isProjectsRequest(request)) {
-        return await handleProjectsRequest(connection, request);
+        return optimizeResponse(
+          await handleProjectsRequest(connection, request),
+        );
       }
 
       if (isRepositoriesRequest(request)) {
-        return await handleRepositoriesRequest(connection, request);
+        return optimizeResponse(
+          await handleRepositoriesRequest(connection, request),
+        );
       }
 
       if (isOrganizationsRequest(request)) {
         // Organizations feature doesn't need the config object anymore
-        return await handleOrganizationsRequest(connection, request);
+        return optimizeResponse(
+          await handleOrganizationsRequest(connection, request),
+        );
       }
 
       if (isSearchRequest(request)) {
-        return await handleSearchRequest(connection, request);
+        return optimizeResponse(await handleSearchRequest(connection, request));
       }
 
       if (isUsersRequest(request)) {
-        return await handleUsersRequest(connection, request);
+        return optimizeResponse(await handleUsersRequest(connection, request));
       }
 
       if (isPullRequestsRequest(request)) {
-        return await handlePullRequestsRequest(connection, request);
+        return optimizeResponse(
+          await handlePullRequestsRequest(connection, request),
+        );
       }
 
       if (isPipelinesRequest(request)) {
-        return await handlePipelinesRequest(connection, request);
+        return optimizeResponse(
+          await handlePipelinesRequest(connection, request),
+        );
       }
 
       if (isWikisRequest(request)) {
-        return await handleWikisRequest(connection, request);
+        return optimizeResponse(await handleWikisRequest(connection, request));
       }
 
       if (isReleasesRequest(request)) {
-        return await handleReleasesRequest(connection, request);
+        return optimizeResponse(
+          await handleReleasesRequest(connection, request),
+        );
       }
 
       // If we get here, the tool is not recognized by any feature handler
@@ -494,4 +510,28 @@ export async function getConnection(
       `Failed to connect to Azure DevOps: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+}
+
+/**
+ * Optimize tool response by removing null/undefined fields and compacting JSON
+ * to reduce token consumption when results are passed to the AI model.
+ */
+function optimizeResponse(
+  response: CallToolResult | { content: Array<{ type: string; text: string }> },
+): CallToolResult | { content: Array<{ type: string; text: string }> } {
+  return {
+    ...response,
+    content: (response.content as Array<{ type: string; text?: string }>).map(
+      (item) => {
+        if (item.type !== 'text' || typeof item.text !== 'string') return item;
+        try {
+          const parsed = JSON.parse(item.text);
+          return { ...item, text: serialize(parsed) };
+        } catch {
+          // Not JSON (e.g. plain text logs), return as-is
+          return item;
+        }
+      },
+    ),
+  } as CallToolResult;
 }
