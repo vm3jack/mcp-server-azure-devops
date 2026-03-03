@@ -89,7 +89,7 @@
     "ai",
     "automation"
   ],
-  "author": "",
+  "author": "vm3jack",
   "license": "MIT",
   "dependencies": {
     "@azure/identity": "^4.8.0",
