@@ -1,0 +1,55 @@
+{
+	"inputs": [
+		{
+			"type": "promptString",
+			"id": "orgUrl",
+			"description": "TFS / Azure DevOps Server URL (e.g. https://server/tfs/DefaultCollection)"
+		},
+		{
+			"type": "pickString",
+			"id": "authMethod",
+			"description": "Authentication method",
+			"options": [
+				{
+					"label": "Personal Access Token (PAT) - recommended for TFS on-premises",
+					"value": "pat"
+				},
+				{
+					"label": "Azure Identity (Azure CLI / Managed Identity)",
+					"value": "azure-identity"
+				},
+				{
+					"label": "Azure CLI",
+					"value": "azure-cli"
+				}
+			]
+		},
+		{
+			"type": "promptString",
+			"id": "pat",
+			"description": "Personal Access Token (PAT) - leave empty if using Azure Identity or Azure CLI",
+			"password": true
+		},
+		{
+			"type": "promptString",
+			"id": "defaultProject",
+			"description": "Default project name (optional, press Enter to skip)"
+		},
+		{
+			"type": "pickString",
+			"id": "tlsMode",
+			"description": "Are you behind a corporate proxy or using a self-signed SSL certificate?",
+			"options": [
+				{
+					"label": "No - Use standard TLS verification",
+					"value": "1"
+				},
+				{
+					"label": "Yes - Disable TLS verification (corporate proxy / self-signed cert)",
+					"value": "0"
+				}
+			]
+		}
+	],
+	"servers": {}
+}

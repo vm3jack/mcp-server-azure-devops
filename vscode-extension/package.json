@@ -1,0 +1,56 @@
+{
+  "name": "azure-devops-mcp",
+  "displayName": "Azure DevOps MCP Server",
+  "description": "MCP server for Azure DevOps / TFS — guided setup with interactive prompts",
+  "version": "1.0.3",
+  "publisher": "vm3jack",
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "AI"
+  ],
+  "keywords": [
+    "mcp",
+    "azure-devops",
+    "tfs",
+    "copilot",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vm3jack/mcp-server-azure-devops"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "icon": "icon.png",
+  "main": "./out/extension.js",
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "azure-devops-mcp",
+        "label": "Azure DevOps / TFS MCP Server"
+      }
+    ],
+    "commands": [
+      {
+        "command": "azure-devops-mcp.reconfigure",
+        "title": "Reconfigure",
+        "category": "Azure DevOps MCP"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.99.0",
+    "@vscode/vsce": "^3.0.0",
+    "sharp": "^0.34.5",
+    "typescript": "^5.8.2"
+  }
+}
