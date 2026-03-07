@@ -4,48 +4,37 @@ import * as vscode from 'vscode';
 const PROVIDER_ID = 'azure-devops-mcp';
 const SERVER_LABEL = 'Azure DevOps / TFS';
 
-const KEYS = {
-  orgUrl: 'adoMcp.orgUrl',
-  authMethod: 'adoMcp.authMethod',
-  defaultProject: 'adoMcp.defaultProject',
-  tlsMode: 'adoMcp.tlsMode',
-  pat: 'adoMcp.pat',
-};
+async function promptConfig(): Promise<boolean> {
+  const cfg = vscode.workspace.getConfiguration('adoMcp');
 
-async function promptConfig(
-  context: vscode.ExtensionContext,
-): Promise<boolean> {
-  // Step 1: Server URL
   const orgUrl = await vscode.window.showInputBox({
     title: 'Azure DevOps / TFS Setup (1/5)',
     prompt: 'TFS / Azure DevOps Server URL',
     placeHolder: 'https://server/tfs/DefaultCollection',
-    value: context.globalState.get(KEYS.orgUrl, ''),
+    value: cfg.get<string>('orgUrl', ''),
     ignoreFocusOut: true,
     validateInput: (v) => (v.trim() ? undefined : 'URL is required'),
   });
   if (orgUrl === undefined) return false;
 
-  // Step 2: Auth method
-  const currentAuth = context.globalState.get<string>(KEYS.authMethod) ?? 'pat';
   const authItems = [
     {
       label: 'Personal Access Token (PAT)',
       description: 'Recommended for TFS on-premises',
       value: 'pat',
-      picked: currentAuth === 'pat',
+      picked: cfg.get<string>('authMethod', 'pat') === 'pat',
     },
     {
       label: 'Azure Identity',
       description: 'Managed Identity / Workload Identity',
       value: 'azure-identity',
-      picked: currentAuth === 'azure-identity',
+      picked: cfg.get<string>('authMethod') === 'azure-identity',
     },
     {
       label: 'Azure CLI',
       description: 'Uses az login credentials',
       value: 'azure-cli',
-      picked: currentAuth === 'azure-cli',
+      picked: cfg.get<string>('authMethod') === 'azure-cli',
     },
   ];
   const authPick = await vscode.window.showQuickPick(authItems, {
@@ -55,7 +44,6 @@ async function promptConfig(
   });
   if (!authPick) return false;
 
-  // Step 3: PAT (only if pat auth)
   let pat = '';
   if (authPick.value === 'pat') {
     const patInput = await vscode.window.showInputBox({
@@ -69,18 +57,16 @@ async function promptConfig(
     pat = patInput;
   }
 
-  // Step 4: Default project (optional)
   const defaultProject = await vscode.window.showInputBox({
     title: 'Azure DevOps / TFS Setup (4/5)',
     prompt: 'Default project name (optional)',
     placeHolder: 'Press Enter to skip',
-    value: context.globalState.get(KEYS.defaultProject, ''),
+    value: cfg.get<string>('defaultProject', ''),
     ignoreFocusOut: true,
   });
   if (defaultProject === undefined) return false;
 
-  // Step 5: TLS mode
-  const currentTls = context.globalState.get<string>(KEYS.tlsMode) ?? '1';
+  const currentTls = cfg.get<string>('tlsMode', '1');
   const tlsItems = [
     {
       label: 'Standard TLS verification',
@@ -103,16 +89,21 @@ async function promptConfig(
   });
   if (!tlsPick) return false;
 
-  // Store all values
-  await context.globalState.update(KEYS.orgUrl, orgUrl.trim());
-  await context.globalState.update(KEYS.authMethod, authPick.value);
-  await context.globalState.update(KEYS.defaultProject, defaultProject.trim());
-  await context.globalState.update(KEYS.tlsMode, tlsPick.value);
+  await cfg.update('orgUrl', orgUrl.trim(), vscode.ConfigurationTarget.Global);
+  await cfg.update(
+    'authMethod',
+    authPick.value,
+    vscode.ConfigurationTarget.Global,
+  );
   if (authPick.value === 'pat') {
-    await context.secrets.store(KEYS.pat, pat);
-  } else {
-    await context.secrets.delete(KEYS.pat);
+    await cfg.update('pat', pat, vscode.ConfigurationTarget.Global);
   }
+  await cfg.update(
+    'defaultProject',
+    defaultProject.trim(),
+    vscode.ConfigurationTarget.Global,
+  );
+  await cfg.update('tlsMode', tlsPick.value, vscode.ConfigurationTarget.Global);
 
   return true;
 }
@@ -120,20 +111,26 @@ async function promptConfig(
 export function activate(context: vscode.ExtensionContext) {
   const didChangeEmitter = new vscode.EventEmitter<void>();
 
-  // Register reconfigure command
   context.subscriptions.push(
     vscode.commands.registerCommand(
       'azure-devops-mcp.reconfigure',
       async () => {
-        const ok = await promptConfig(context);
+        const ok = await promptConfig();
         if (ok) {
-          didChangeEmitter.fire(); // restart MCP server with new config
           vscode.window.showInformationMessage(
             'Azure DevOps MCP: Configuration updated, server restarting...',
           );
         }
       },
     ),
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('adoMcp')) {
+        didChangeEmitter.fire();
+      }
+    }),
   );
 
   context.subscriptions.push(
@@ -152,48 +149,35 @@ export function activate(context: vscode.ExtensionContext) {
       },
 
       async resolveMcpServerDefinition(server: vscode.McpServerDefinition) {
-        const orgUrl = context.globalState.get<string>(KEYS.orgUrl);
-        const authMethod = context.globalState.get<string>(KEYS.authMethod);
+        const cfg = vscode.workspace.getConfiguration('adoMcp');
+        const orgUrl = cfg.get<string>('orgUrl', '');
 
-        // First time setup
-        if (!orgUrl || !authMethod) {
-          const ok = await promptConfig(context);
+        if (!orgUrl) {
+          const ok = await promptConfig();
           if (!ok) return undefined;
         }
 
-        const resolvedOrgUrl = context.globalState.get<string>(KEYS.orgUrl, '');
-        const resolvedAuthMethod = context.globalState.get<string>(
-          KEYS.authMethod,
-          'pat',
-        );
-        const resolvedDefaultProject = context.globalState.get<string>(
-          KEYS.defaultProject,
-          '',
-        );
-        const resolvedTlsMode = context.globalState.get<string>(
-          KEYS.tlsMode,
-          '1',
-        );
-        const resolvedPat = (await context.secrets.get(KEYS.pat)) ?? '';
-
-        const serverPath = context.asAbsolutePath(
-          path.join('out', 'server.js'),
-        );
+        const resolved = vscode.workspace.getConfiguration('adoMcp');
         return new vscode.McpStdioServerDefinition(
           server.label,
           process.execPath,
-          [serverPath],
+          [context.asAbsolutePath(path.join('out', 'server.js'))],
           {
-            AZURE_DEVOPS_ORG_URL: resolvedOrgUrl,
-            AZURE_DEVOPS_AUTH_METHOD: resolvedAuthMethod,
-            AZURE_DEVOPS_PAT: resolvedPat,
-            AZURE_DEVOPS_DEFAULT_PROJECT: resolvedDefaultProject,
-            NODE_TLS_REJECT_UNAUTHORIZED: resolvedTlsMode,
+            AZURE_DEVOPS_ORG_URL: resolved.get<string>('orgUrl', ''),
+            AZURE_DEVOPS_AUTH_METHOD: resolved.get<string>('authMethod', 'pat'),
+            AZURE_DEVOPS_PAT: resolved.get<string>('pat', ''),
+            AZURE_DEVOPS_DEFAULT_PROJECT: resolved.get<string>(
+              'defaultProject',
+              '',
+            ),
+            NODE_TLS_REJECT_UNAUTHORIZED: resolved.get<string>('tlsMode', '1'),
           },
         );
       },
     }),
   );
+
+  context.subscriptions.push(didChangeEmitter);
 }
 
 export function deactivate() {}

@@ -2,7 +2,7 @@
   "name": "azure-devops-mcp",
   "displayName": "Azure DevOps MCP Server",
   "description": "MCP server for Azure DevOps / TFS — guided setup with interactive prompts",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "vm3jack",
   "engines": {
     "vscode": "^1.99.0"
@@ -39,7 +39,45 @@
         "title": "Reconfigure",
         "category": "Azure DevOps MCP"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Azure DevOps MCP",
+      "properties": {
+        "adoMcp.orgUrl": {
+          "type": "string",
+          "description": "TFS / Azure DevOps Server URL (e.g. https://dev.azure.com/org or https://server/tfs/Collection)"
+        },
+        "adoMcp.authMethod": {
+          "type": "string",
+          "enum": ["pat", "azure-identity", "azure-cli"],
+          "default": "pat",
+          "enumDescriptions": [
+            "Personal Access Token",
+            "Azure Managed Identity / Workload Identity",
+            "Azure CLI (az login)"
+          ],
+          "description": "Authentication method"
+        },
+        "adoMcp.pat": {
+          "type": "string",
+          "description": "Personal Access Token (PAT)"
+        },
+        "adoMcp.defaultProject": {
+          "type": "string",
+          "description": "Default project name (optional)"
+        },
+        "adoMcp.tlsMode": {
+          "type": "string",
+          "enum": ["1", "0"],
+          "enumDescriptions": [
+            "Standard TLS verification (default)",
+            "Disable TLS verification (self-signed certificate)"
+          ],
+          "default": "1",
+          "description": "TLS verification mode"
+        }
+      }
+    }
   },
   "scripts": {
     "build": "tsc -p ./ && esbuild ../src/index.ts --bundle --platform=node --target=node20 --outfile=out/server.js --external:vscode",
