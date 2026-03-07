@@ -1,6 +1,6 @@
 {
-  "name": "@vm3jack/mcp-server-azure-devops",
-  "version": "1.0.0",
+  "name": "mcp-server-azure-devops",
+  "version": "1.0.4",
   "description": "Azure DevOps reference server for the Model Context Protocol (MCP)",
   "repository": {
     "type": "git",
@@ -67,7 +67,7 @@
     ]
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --external:vscode",
     "prepack": "npm run build && chmod +x dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
@@ -109,10 +109,13 @@
     "@types/diff": "^7.0.2",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
+    "@types/vscode": "^1.109.0",
     "@typescript-eslint/eslint-plugin": "^8.27.0",
     "@typescript-eslint/parser": "^8.27.0",
+    "@vscode/vsce": "^3.7.1",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
+    "esbuild": "^0.27.3",
     "eslint": "^8.0.0",
     "husky": "^8.0.3",
     "jest": "^29.0.0",

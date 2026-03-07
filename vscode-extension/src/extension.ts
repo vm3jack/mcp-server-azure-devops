@@ -1,8 +1,8 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 
 const PROVIDER_ID = 'azure-devops-mcp';
 const SERVER_LABEL = 'Azure DevOps / TFS';
-const NPM_PACKAGE = '@vm3jack/mcp-server-azure-devops';
 
 const KEYS = {
   orgUrl: 'adoMcp.orgUrl',
@@ -141,10 +141,12 @@ export function activate(context: vscode.ExtensionContext) {
       onDidChangeMcpServerDefinitions: didChangeEmitter.event,
 
       async provideMcpServerDefinitions() {
+        const serverPath = context.asAbsolutePath(
+          path.join('out', 'server.js'),
+        );
         return [
-          new vscode.McpStdioServerDefinition(SERVER_LABEL, 'npx', [
-            '-y',
-            NPM_PACKAGE,
+          new vscode.McpStdioServerDefinition(SERVER_LABEL, process.execPath, [
+            serverPath,
           ]),
         ];
       },
@@ -174,10 +176,13 @@ export function activate(context: vscode.ExtensionContext) {
         );
         const resolvedPat = (await context.secrets.get(KEYS.pat)) ?? '';
 
+        const serverPath = context.asAbsolutePath(
+          path.join('out', 'server.js'),
+        );
         return new vscode.McpStdioServerDefinition(
           server.label,
-          'npx',
-          ['-y', NPM_PACKAGE],
+          process.execPath,
+          [serverPath],
           {
             AZURE_DEVOPS_ORG_URL: resolvedOrgUrl,
             AZURE_DEVOPS_AUTH_METHOD: resolvedAuthMethod,

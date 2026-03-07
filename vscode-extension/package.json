@@ -2,7 +2,7 @@
   "name": "azure-devops-mcp",
   "displayName": "Azure DevOps MCP Server",
   "description": "MCP server for Azure DevOps / TFS — guided setup with interactive prompts",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "publisher": "vm3jack",
   "engines": {
     "vscode": "^1.99.0"
@@ -42,7 +42,7 @@
     ]
   },
   "scripts": {
-    "build": "tsc -p ./",
+    "build": "tsc -p ./ && esbuild ../src/index.ts --bundle --platform=node --target=node20 --outfile=out/server.js --external:vscode",
     "watch": "tsc -watch -p ./",
     "package": "vsce package",
     "publish": "vsce publish"
@@ -50,6 +50,7 @@
   "devDependencies": {
     "@types/vscode": "^1.99.0",
     "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.27.3",
     "sharp": "^0.34.5",
     "typescript": "^5.8.2"
   }
