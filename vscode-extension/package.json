@@ -2,7 +2,7 @@
   "name": "azure-devops-mcp",
   "displayName": "MCP Server for Azure DevOps",
   "description": "MCP server compatible with Azure DevOps / TFS",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "publisher": "vm3jack",
   "engines": {
     "vscode": "^1.99.0"
